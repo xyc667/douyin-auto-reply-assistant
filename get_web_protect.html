@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>获取抖音 web_protect 参数</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .step {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+        }
+        .step h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        .step p {
+            color: #666;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        button {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #dee2e6;
+        }
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+        .output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 12px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            display: none;
+        }
+        .output.show {
+            display: block;
+        }
+        .output .success {
+            color: #4ec9b0;
+        }
+        .output .error {
+            color: #f14c4c;
+        }
+        .output .info {
+            color: #3794ff;
+        }
+        .output .warn {
+            color: #cca700;
+        }
+        .note {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #856404;
+        }
+        .note strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 13px;
+            border-top: 1px solid #dee2e6;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .copy-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .output-container {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 获取抖音 web_protect 参数</h1>
+            <p>用于启用私信发送功能</p>
+        </div>
+        
+        <div class="content">
+            <div class="step">
+                <h3>📌 使用说明</h3>
+                <p>此工具用于获取抖音私信发送功能所需的 web_protect 参数。点击下方按钮开始搜索，然后按照提示操作。</p>
+            </div>
+            
+            <div class="note">
+                <strong>⚠️ 注意事项</strong>
+                <p>1. 请确保你已在抖音网页版登录</p>
+                <p>2. 此页面需要在 douyin.com 域名下运行才能访问相关数据</p>
+                <p>3. 如果在此页面运行，可能无法获取到参数（跨域限制）</p>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn-primary" onclick="startSearch()">🔍 开始搜索参数</button>
+                <button class="btn-secondary" onclick="setupInterceptor()">📡 设置网络拦截器</button>
+            </div>
+            
+            <div class="output-container">
+                <div id="output" class="output"></div>
+            </div>
+            
+            <div class="step" style="margin-top: 30px;">
+                <h3>💡 如果在此页面无法获取</h3>
+                <p>1. 打开 <a href="https://www.douyin.com" target="_blank">https://www.douyin.com</a></p>
+                <p>2. 按 F12 打开开发者工具</p>
+                <p>3. 切换到 Console（控制台）标签</p>
+                <p>4. 打开项目中的 <code>get_web_protect.js</code> 文件</p>
+                <p>5. 复制全部内容，粘贴到控制台并按 Enter</p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>DouYin Spider - 私信发送功能配置工具</p>
+        </div>
+    </div>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message, type = '') {
+            const span = document.createElement('span');
+            span.className = type;
+            span.textContent = message + '\n';
+            output.appendChild(span);
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        function clearOutput() {
+            output.innerHTML = '';
+            output.classList.add('show');
+        }
+        
+        function startSearch() {
+            clearOutput();
+            log('========================================', 'info');
+            log('🔍 开始查找 web_protect 相关参数...', 'info');
+            log('========================================', 'info');
+            log('');
+            
+            let found = false;
+            
+            // 检查 localStorage
+            log('📦 检查 localStorage...', 'info');
+            try {
+                for (let i = 0; i < localStorage.length; i++) {
+                    let key = localStorage.key(i);
+                    let value = localStorage.getItem(key);
+                    if (value && (value.includes('ticket') || value.includes('ts_sign') || value.includes('client_cert') || value.includes('ec_privateKey'))) {
+                        log('✅ 找到可能的键: ' + key, 'success');
+                        log('值: ' + value.substring(0, 200) + '...', '');
+                        found = true;
+                    }
+                }
+            } catch (e) {
+                log('❌ 无法访问 localStorage: ' + e.message, 'error');
+            }
+            log('');
+            
+            // 检查 sessionStorage
+            log('📦 检查 sessionStorage...', 'info');
+            try {
+                for (let i = 0; i < sessionStorage.length; i++) {
+                    let key = sessionStorage.key(i);
+                    let value = sessionStorage.getItem(key);
+                    if (value && (value.includes('ticket') || value.includes('ts_sign') || value.includes('client_cert') || value.includes('ec_privateKey'))) {
+                        log('✅ 找到可能的键: ' + key, 'success');
+                        log('值: ' + value.substring(0, 200) + '...', '');
+                        found = true;
+                    }
+                }
+            } catch (e) {
+                log('❌ 无法访问 sessionStorage: ' + e.message, 'error');
+            }
+            log('');
+            
+            // 总结
+            log('========================================', 'info');
+            if (found) {
+                log('✅ 已找到一些参数！', 'success');
+            } else {
+                log('⚠️ 未找到参数', 'warn');
+                log('');
+                log('可能的原因：', 'warn');
+                log('1. 此页面不在 douyin.com 域名下', '');
+                log('2. 参数存储在其他位置', '');
+                log('', '');
+                log('💡 建议：', 'info');
+                log('请到 douyin.com 的控制台中运行脚本', '');
+            }
+            log('========================================', 'info');
+        }
+        
+        function setupInterceptor() {
+            clearOutput();
+            log('========================================', 'info');
+            log('📡 设置网络请求拦截器...', 'info');
+            log('========================================', 'info');
+            log('');
+            
+            // 拦截 fetch
+            const originalFetch = window.fetch;
+            window.fetch = function(...args) {
+                const url = args[0];
+                log('📤 拦截到请求: ' + url, 'info');
+                
+                return originalFetch.apply(this, args).then(response => {
+                    const clonedResponse = response.clone();
+                    
+                    clonedResponse.text().then(text => {
+                        if (text && (text.includes('ticket') || text.includes('ts_sign') || text.includes('client_cert') || text.includes('ec_privateKey'))) {
+                            log('🎉 找到包含目标参数的响应！', 'success');
+                            log('URL: ' + url, '');
+                            log('响应内容: ' + text.substring(0, 500), '');
+                            log('', '');
+                        }
+                    });
+                    
+                    return response;
+                });
+            };
+            
+            log('✅ 拦截器已设置！', 'success');
+            log('', '');
+            log('💡 现在请：', 'info');
+            log('1. 在另一个标签页打开 douyin.com', '');
+            log('2. 发送一条私信 或 刷新页面', '');
+            log('3. 查看此页面的输出', '');
+            log('', '');
+            log('⚠️ 注意：由于跨域限制，可能无法拦截其他页面的请求', 'warn');
+        }
+    </script>
+</body>
+</html>

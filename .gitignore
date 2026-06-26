@@ -1,0 +1,100 @@
+# ============================================
+# Python / 虚拟环境
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.eggs/
+
+# ============================================
+# Node
+# ============================================
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+
+# ============================================
+# 敏感配置与账号信息 ⚠️ 严禁上传
+# ============================================
+.env
+.env.*
+!.env.example
+accounts.json
+config_ai.env
+cookies*.txt
+*_cookies.json
+device*.json
+user_token*.json
+
+# ============================================
+# 运行时数据 / 日志 / 用户隐私
+# ============================================
+datas/reply_log.txt
+datas/blacklist.txt
+datas/*.log
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+.cache/
+
+# 整个 datas/ 目录默认忽略；保留 git 跟踪可手动 git add -f
+datas/
+
+# ============================================
+# IDE / 编辑器
+# ============================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ============================================
+# 系统 / 临时
+# ============================================
+*.tmp
+*.bak
+*.spec
+.cache
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# ============================================
+# 打包 / 分发
+# ============================================
+*.manifest
+*.spec

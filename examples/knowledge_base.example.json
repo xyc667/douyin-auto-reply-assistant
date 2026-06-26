@@ -1,0 +1,27 @@
+{
+  "knowledge_base": [
+    {
+      "question": "你好",
+      "answer": "嗨~"
+    },
+    {
+      "question": "在吗",
+      "answer": "嗯嗯，在的"
+    },
+    {
+      "question": "价格",
+      "answer": "亲亲，稍等哈，我去问问哦"
+    },
+    {
+      "question": "怎么联系",
+      "answer": "嗯嗯，等我看看哈"
+    },
+    {
+      "question": "营业时间",
+      "answer": "稍等，我看看呢"
+    }
+  ],
+  "version": "1.0",
+  "last_updated": "2025-01-01",
+  "description": "示例知识库 - 真人风格简短回复"
+}
