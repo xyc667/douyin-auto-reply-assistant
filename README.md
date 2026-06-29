@@ -1,6 +1,6 @@
 # 抖音私信自动回复助手（整合版）
 
-(https://github.com/cv-cat/Douyin_Spider) ，集成 **知识库 + AI 大模型 + 真人风格延迟 + 多账号** 的 Windows 桌面助手。
+> 基于 [Douyin_Spider](https://github.com/cv-cat/Douyin_Spider) 二次开发，集成 **知识库 + AI 大模型 + 真人风格延迟 + 多账号** 的 Windows 桌面助手。
 
 [![Python](https://img.shields.io/badge/python-3.7%2B-blue)](https://www.python.org/)
 [![Node.js](https://img.shields.io/badge/nodejs-18%2B-green)](https://nodejs.org/)
@@ -71,6 +71,9 @@ playwright install chromium
 ```bash
 copy .env.example .env
 copy config_ai.env.example config_ai.env
+copy accounts.json.example accounts.json
+mkdir datas
+copy examples\knowledge_base.example.json datas\knowledge_base.json
 ```
 
 编辑 `.env`：
@@ -139,7 +142,7 @@ python 抖音私信助手_整合版.py
 |------|------|
 | `.env` | 抖音 Cookie、WEB_PROTECT、KEYS |
 | `config_ai.env` | AI API Key |
-| `accounts.json` | 多账号数据（首次使用后自动生成） |
+| `accounts.json` | 多账号数据（从 `accounts.json.example` 复制，首次使用后写入） |
 | `datas/reply_log.txt` | 运行日志 |
 
 ---
