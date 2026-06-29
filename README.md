@@ -38,14 +38,12 @@
 ├── auto_login.py / start_login.bat
 ├── get_web_protect.js / .html
 ├── builder/                   # 认证与签名
-├── dy_apis/                   # 抖音 API
+├── dy_apis/douyin_api.py      # 抖音 API
 ├── static/                    # Protobuf + JS 签名
-├── utils/dy_util.py             # 工具
-├── examples/                  # 知识库示例
-├── .env.example               # 抖音凭证模板
-├── config_ai.env.example      # AI 配置模板
-├── pack_integrated.py         # 打包脚本
-└── scan_secrets.py            # 敏感信息扫描
+├── utils/dy_util.py
+├── examples/knowledge_base.example.json
+├── .env.example
+└── config_ai.env.example
 ```
 
 ---
@@ -143,13 +141,6 @@ python 抖音私信助手_整合版.py
 | `config_ai.env` | AI API Key |
 | `accounts.json` | 多账号数据（首次使用后自动生成） |
 | `datas/reply_log.txt` | 运行日志 |
-
-打包分发前可运行：
-
-```bash
-python pack_integrated.py
-python scan_secrets.py
-```
 
 ---
 
