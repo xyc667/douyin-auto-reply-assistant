@@ -5,8 +5,8 @@ import zipfile
 from pathlib import Path
 
 SRC = Path(__file__).parent
-OUT_DIR = SRC.parent / "DouYin_Spider_整合版"
-ZIP_PATH = SRC.parent / "DouYin_Spider_整合版.zip"
+OUT_DIR = SRC / "dist" / "package"
+ZIP_PATH = SRC / "dist" / "douyin-auto-reply-assistant.zip"
 
 EXCLUDE_NAMES = {
     "accounts.json",
@@ -31,7 +31,6 @@ ROOT_FILES = [
     "package.json",
     ".env.example",
     "config_ai.env.example",
-    "README_整合版.txt",
 ]
 
 DIRS = ["builder", "dy_apis", "utils", "static"]

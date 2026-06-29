@@ -58,9 +58,8 @@ def scan_dir(dpath: Path, exclude_dirs=None):
 
 
 if __name__ == "__main__":
-    base = Path(__file__).parent.parent
-    zip_path = base / "DouYin_Spider_整合版.zip"
     proj = Path(__file__).parent
+    zip_path = proj / "dist" / "douyin-auto-reply-assistant.zip"
 
     print("=== ZIP:", zip_path.name, "===")
     if zip_path.exists():
