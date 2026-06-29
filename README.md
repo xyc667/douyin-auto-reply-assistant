@@ -32,21 +32,20 @@
 ```
 .
 ├── 抖音私信助手_整合版.py      # 主入口
-├── 启动私信助手_整合版.bat      # Windows 一键启动
-├── ai_auto_reply.py           # AI / 知识库 / 黑名单逻辑
-├── account_manager.py         # 多账号管理
-├── account_gui.py             # 账号管理界面
-├── auto_login.py              # 自动登录
-├── builder/                   # 认证与请求签名
+├── 启动私信助手_整合版.bat
+├── ai_auto_reply.py
+├── account_manager.py / account_gui.py
+├── auto_login.py / start_login.bat
+├── get_web_protect.js / .html
+├── builder/                   # 认证与签名
 ├── dy_apis/                   # 抖音 API
-├── static/                    # Protobuf / JS 签名
-├── utils/                     # 工具函数
-├── examples/
-│   └── knowledge_base.example.json
-├── .env.example               # 抖音凭证模板（复制为 .env）
-├── config_ai.env.example      # AI 配置模板（复制为 config_ai.env）
-├── pack_integrated.py         # 打包精简 zip（不含敏感信息）
-└── scan_secrets.py            # 打包前敏感信息扫描
+├── static/                    # Protobuf + JS 签名
+├── utils/dy_util.py             # 工具
+├── examples/                  # 知识库示例
+├── .env.example               # 抖音凭证模板
+├── config_ai.env.example      # AI 配置模板
+├── pack_integrated.py         # 打包脚本
+└── scan_secrets.py            # 敏感信息扫描
 ```
 
 ---

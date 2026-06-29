@@ -443,7 +443,5 @@ if __name__ == '__main__':
     safe_print("✅ 系统初始化完成！")
     safe_print("=" * 60)
     safe_print("\n使用方法：")
-    safe_print("1. 集成到 dy_apis/douyin_recv_ai.py 中使用")
-    safe_print("2. 配置好 config_ai.env 中的API密钥")
     safe_print("3. 修改知识库 datas/knowledge_base.json")
     safe_print("\n或直接运行此文件进行测试")
