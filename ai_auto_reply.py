@@ -443,5 +443,7 @@ if __name__ == '__main__':
     safe_print("✅ 系统初始化完成！")
     safe_print("=" * 60)
     safe_print("\n使用方法：")
+    safe_print("1. 配置 config_ai.env 中的 API 密钥")
+    safe_print("2. 运行 抖音私信助手_整合版.py")
     safe_print("3. 修改知识库 datas/knowledge_base.json")
     safe_print("\n或直接运行此文件进行测试")
