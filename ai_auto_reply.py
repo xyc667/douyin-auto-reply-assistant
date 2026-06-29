@@ -20,6 +20,7 @@ import hashlib
 
 # 加载环境变量
 from dotenv import load_dotenv
+from account_manager import safe_print
 
 @dataclass
 class Message:
@@ -58,11 +59,11 @@ class KnowledgeBase:
                 with open(self.kb_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     self.knowledge = data.get('knowledge_base', [])
-                print(f"✅ 知识库加载成功，共 {len(self.knowledge)} 条")
+                safe_print(f"✅ 知识库加载成功，共 {len(self.knowledge)} 条")
             else:
-                print(f"⚠️ 知识库文件不存在: {self.kb_file}")
+                safe_print(f"⚠️ 知识库文件不存在: {self.kb_file}")
         except Exception as e:
-            print(f"❌ 知识库加载失败: {e}")
+            safe_print(f"❌ 知识库加载失败: {e}")
             self.knowledge = []
     
     def find_match(self, question: str, threshold: float = 0.7) -> Optional[str]:
@@ -100,15 +101,15 @@ class Blacklist:
             if os.path.exists(self.blacklist_file):
                 with open(self.blacklist_file, 'r', encoding='utf-8') as f:
                     self.blocked_users = set(line.strip() for line in f if line.strip())
-                print(f"✅ 黑名单加载成功，共 {len(self.blocked_users)} 个用户")
+                safe_print(f"✅ 黑名单加载成功，共 {len(self.blocked_users)} 个用户")
             else:
                 # 创建空的黑名单文件
                 Path(self.blacklist_file).parent.mkdir(parents=True, exist_ok=True)
                 with open(self.blacklist_file, 'w', encoding='utf-8') as f:
                     f.write("")
-                print("✅ 黑名单文件已创建")
+                safe_print("✅ 黑名单文件已创建")
         except Exception as e:
-            print(f"❌ 黑名单加载失败: {e}")
+            safe_print(f"❌ 黑名单加载失败: {e}")
     
     def is_blocked(self, user_id: str) -> bool:
         """检查用户是否在黑名单中"""
@@ -133,7 +134,7 @@ class Blacklist:
             with open(self.blacklist_file, 'w', encoding='utf-8') as f:
                 f.write('\n'.join(sorted(self.blocked_users)))
         except Exception as e:
-            print(f"❌ 保存黑名单失败: {e}")
+            safe_print(f"❌ 保存黑名单失败: {e}")
 
 class AIClient:
     """AI客户端 - MiniMax API"""
@@ -177,7 +178,8 @@ class AIClient:
             # 调用API
             headers = {
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.config.api_key}"
+                "Authorization": f"Bearer {self.config.api_key}",
+                "anthropic-version": "2023-06-01",
             }
             
             data = {
@@ -207,8 +209,8 @@ class AIClient:
                             break
                 
                 if not reply:
-                    print(f"⚠️ AI返回为空: {result}")
-                    reply = "抱歉，AI回复为空"
+                    safe_print(f"⚠️ AI返回为空: {result}")
+                    return None
                 
                 # 保存对话历史
                 with self.session_lock:
@@ -223,16 +225,16 @@ class AIClient:
                 
                 return reply
             else:
-                print(f"❌ API调用失败: {response.status_code} - {response.text}")
-                return f"抱歉，AI服务暂时不可用（错误码：{response.status_code}）"
+                safe_print(f"❌ API调用失败: {response.status_code} - {response.text}")
+                return None
                 
         except ImportError:
-            print("❌ 请安装requests库: pip install requests")
-            return "系统配置错误，请联系管理员"
+            safe_print("❌ 请安装requests库: pip install requests")
+            return None
         except Exception as e:
-            print(f"❌ AI调用失败: {e}")
+            safe_print(f"❌ AI调用失败: {e}")
             traceback.print_exc()
-            return "抱歉，AI处理出现问题，请稍后再试"
+            return None
 
 class ReplyLogger:
     """日志记录"""
@@ -277,13 +279,20 @@ class AutoReplySystem:
     """自动回复系统"""
     
     def __init__(self, config_file: str = "config_ai.env"):
-        # 加载配置
-        load_dotenv(config_file)
+        config_path = Path(config_file)
+        load_dotenv(config_path)
+        if config_path.parent.exists():
+            load_dotenv(config_path.parent / '.env')
+        
+        api_key = (
+            os.getenv('ANTHROPIC_API_KEY', '').strip()
+            or os.getenv('MINIMAX_API_KEY', '').strip()
+        )
         
         # 初始化配置
         self.ai_config = AIConfig(
             provider=os.getenv('AI_PROVIDER', 'anthropic'),
-            api_key=os.getenv('ANTHROPIC_API_KEY', ''),
+            api_key=api_key,
             base_url=os.getenv('ANTHROPIC_BASE_URL', 'https://api.minimaxi.com/anthropic'),
             model=os.getenv('AI_MODEL', 'MiniMax-M2.7'),
             max_tokens=int(os.getenv('MAX_TOKENS', '1000')),
@@ -316,17 +325,30 @@ class AutoReplySystem:
         self.knowledge_first = os.getenv('KNOWLEDGE_FIRST', 'false').lower() == 'true'
         self.ai_fallback = os.getenv('AI_FALLBACK', 'true').lower() == 'true'
         
-        print("=" * 60)
-        print("🤖 AI自动回复系统初始化完成！")
-        print("=" * 60)
-        print(f"AI服务商: {self.ai_config.provider}")
-        print(f"API地址: {self.ai_config.base_url}")
-        print(f"模型: {self.ai_config.model}")
-        print(f"自动回复: {'启用' if self.auto_reply_enabled else '禁用'}")
-        print(f"知识库优先: {'是' if self.knowledge_first else '否'}")
-        print(f"AI降级: {'启用' if self.ai_fallback else '禁用（纯知识库模式）'}")
-        print(f"并发数: {os.getenv('MAX_CONCURRENT', '10')}")
-        print("=" * 60)
+        safe_print("=" * 60)
+        safe_print("🤖 AI自动回复系统初始化完成！")
+        safe_print("=" * 60)
+        safe_print(f"AI服务商: {self.ai_config.provider}")
+        safe_print(f"API地址: {self.ai_config.base_url}")
+        safe_print(f"模型: {self.ai_config.model}")
+        safe_print(f"自动回复: {'启用' if self.auto_reply_enabled else '禁用'}")
+        safe_print(f"知识库优先: {'是' if self.knowledge_first else '否'}")
+        safe_print(f"AI降级: {'启用' if self.ai_fallback else '禁用（纯知识库模式）'}")
+        safe_print(f"API Key: {'已配置' if self.ai_config.api_key else '未配置'}")
+        safe_print(f"并发数: {os.getenv('MAX_CONCURRENT', '10')}")
+        safe_print("=" * 60)
+    
+    def test_ai_connection(self) -> bool:
+        """测试 AI API 是否可用"""
+        if not self.ai_config.api_key:
+            safe_print("❌ 未配置 API Key")
+            return False
+        reply = self.ai_client.chat("你好", user_id="__api_test__", system_prompt="请用一句话回复")
+        if reply:
+            safe_print(f"✅ AI 连接测试成功: {reply[:50]}")
+            return True
+        safe_print("❌ AI 连接测试失败，请检查 API Key 是否有效")
+        return False
     
     def process_message(self, message: Message) -> Optional[str]:
         """处理单条消息"""
@@ -364,8 +386,12 @@ class AutoReplySystem:
                     system_prompt=self.system_prompt
                 )
                 
-                self.logger.log("INFO", "AI回复成功", user_id=message.sender, reply=reply)
-                return reply
+                if reply:
+                    self.logger.log("INFO", "AI回复成功", user_id=message.sender, reply=reply)
+                    return reply
+                
+                self.logger.log("WARNING", "AI未返回有效回复", user_id=message.sender,
+                             attempt=attempt + 1)
                 
             except Exception as e:
                 self.logger.log("ERROR", "AI调用失败", user_id=message.sender, 
@@ -374,13 +400,13 @@ class AutoReplySystem:
                     time.sleep(self.retry_delay)
         
         # 所有重试都失败
-        return "抱歉，AI服务暂时不可用，请稍后再试或联系人工客服"
+        return None
     
     def auto_reply_with_delay(self, message: Message) -> Optional[str]:
         """带延迟的自动回复"""
         # 模拟人工回复延迟
         delay = random.uniform(self.min_delay, self.max_delay)
-        print(f"⏱️  延迟 {delay:.1f} 秒后回复...")
+        safe_print(f"⏱️  延迟 {delay:.1f} 秒后回复...")
         time.sleep(delay)
         
         return self.process_message(message)
@@ -393,7 +419,7 @@ class AutoReplySystem:
             conversation_id=conversation_id
         )
         
-        print(f"\n📩 收到消息 from {sender}: {content}")
+        safe_print(f"\n📩 收到消息 from {sender}: {content}")
         
         # 提交到线程池处理
         future = self.executor.submit(self.auto_reply_with_delay, message)
@@ -401,23 +427,23 @@ class AutoReplySystem:
 
 # 主程序入口
 if __name__ == '__main__':
-    print("=" * 60)
-    print("🚀 AI自动回复系统")
-    print("=" * 60)
+    safe_print("=" * 60)
+    safe_print("🚀 AI自动回复系统")
+    safe_print("=" * 60)
     
     # 初始化系统
     system = AutoReplySystem()
     
     # 测试AI连接
-    print("\n🧪 测试AI连接...")
+    safe_print("\n🧪 测试AI连接...")
     test_reply = system.ai_client.chat("你好", user_id="test")
-    print(f"AI回复: {test_reply}")
+    safe_print(f"AI回复: {test_reply}")
     
-    print("\n" + "=" * 60)
-    print("✅ 系统初始化完成！")
-    print("=" * 60)
-    print("\n使用方法：")
-    print("1. 集成到 dy_apis/douyin_recv_ai.py 中使用")
-    print("2. 配置好 config_ai.env 中的API密钥")
-    print("3. 修改知识库 datas/knowledge_base.json")
-    print("\n或直接运行此文件进行测试")
+    safe_print("\n" + "=" * 60)
+    safe_print("✅ 系统初始化完成！")
+    safe_print("=" * 60)
+    safe_print("\n使用方法：")
+    safe_print("1. 集成到 dy_apis/douyin_recv_ai.py 中使用")
+    safe_print("2. 配置好 config_ai.env 中的API密钥")
+    safe_print("3. 修改知识库 datas/knowledge_base.json")
+    safe_print("\n或直接运行此文件进行测试")

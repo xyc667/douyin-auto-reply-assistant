@@ -10,9 +10,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+BASE_DIR = Path(__file__).parent
+os.chdir(BASE_DIR)
+
 from dotenv import load_dotenv
-load_dotenv('.env')
-load_dotenv('config_ai.env')
+load_dotenv(BASE_DIR / '.env')
+load_dotenv(BASE_DIR / 'config_ai.env')
 
 from ai_auto_reply import AutoReplySystem, Message
 import hashlib
@@ -22,37 +25,49 @@ import websocket
 from websocket import WebSocketApp
 from static import Live_pb2, Response_pb2
 from builder.auth import DouyinAuth
-from account_manager import AccountManager
+from account_manager import AccountManager, safe_print
 from account_gui import AccountManagerWindow
 
 
 class KnowledgeBaseManager:
     def __init__(self, parent):
         self.parent = parent
-        self.kb_path = Path('datas') / 'knowledge_base.json'
+        self.kb_path = BASE_DIR / 'datas' / 'knowledge_base.json'
         self.knowledge_base = []
+        self._metadata = {}
         self.load_knowledge_base()
         
     def load_knowledge_base(self):
-        if self.kb_path.exists():
-            try:
-                with open(self.kb_path, 'r', encoding='utf-8') as f:
-                    self.knowledge_base = json.load(f)
-            except Exception as e:
-                print(f"加载知识库失败: {e}")
-                self.knowledge_base = []
-        else:
-            self.knowledge_base = []
+        self.knowledge_base = []
+        self._metadata = {}
+        if not self.kb_path.exists():
+            return
+        try:
+            with open(self.kb_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                self.knowledge_base = data
+            elif isinstance(data, dict):
+                self.knowledge_base = data.get('knowledge_base', [])
+                self._metadata = {k: v for k, v in data.items() if k != 'knowledge_base'}
+        except Exception as e:
+            safe_print(f"加载知识库失败: {e}")
             
     def save_knowledge_base(self):
         try:
             if not self.kb_path.parent.exists():
                 self.kb_path.parent.mkdir(parents=True)
+            payload = dict(self._metadata)
+            payload['knowledge_base'] = self.knowledge_base
+            if 'version' not in payload:
+                payload['version'] = '2.0'
             with open(self.kb_path, 'w', encoding='utf-8') as f:
-                json.dump(self.knowledge_base, f, ensure_ascii=False, indent=2)
+                json.dump(payload, f, ensure_ascii=False, indent=2)
+            if hasattr(self.parent, 'system') and self.parent.system:
+                self.parent.system.knowledge_base.load()
             return True
         except Exception as e:
-            print(f"保存知识库失败: {e}")
+            safe_print(f"保存知识库失败: {e}")
             return False
             
     def add_entry(self, question, answer):
@@ -84,9 +99,12 @@ class KnowledgeBaseManager:
         return None
     
     def match_knowledge(self, text):
+        text = text.strip()
         for entry in self.knowledge_base:
-            question = entry.get('question', '')
-            if question and question in text:
+            if not isinstance(entry, dict):
+                continue
+            question = entry.get('question', '').strip()
+            if question and (question in text or text in question):
                 return entry.get('answer', '')
         return None
 
@@ -224,6 +242,7 @@ class DouyinGUI:
         self.ws = None
         self.running = False
         self.auth = None
+        self.my_uid = None
         self.kb_manager = KnowledgeBaseManager(self)
         self.account_manager = AccountManager()
         
@@ -287,9 +306,22 @@ class DouyinGUI:
         AccountManagerWindow(self, self.account_manager)
         
     def log(self, msg):
-        self.log_area.insert(tk.END, f"[{time.strftime('%H:%M:%S')}] {msg}\n")
-        self.log_area.see(tk.END)
-        self.root.update()
+        line = f"[{time.strftime('%H:%M:%S')}] {msg}\n"
+
+        def append():
+            self.log_area.insert(tk.END, line)
+            self.log_area.see(tk.END)
+
+        try:
+            self.root.after(0, append)
+        except tk.TclError:
+            safe_print(msg)
+
+    def ui_call(self, callback):
+        try:
+            self.root.after(0, callback)
+        except tk.TclError:
+            pass
         
     def clear_log(self):
         self.log_area.delete(1.0, tk.END)
@@ -321,6 +353,19 @@ class DouyinGUI:
         
         self.kb_manager.load_knowledge_base()
         self.log(f"📚 知识库已重新加载，共 {len(self.kb_manager.knowledge_base)} 条")
+
+        if not self.running:
+            try:
+                self.system = AutoReplySystem(str(BASE_DIR / 'config_ai.env'))
+                self.log("✅ AI/回复配置已重新加载")
+                if self.system.ai_fallback and self.system.ai_config.api_key:
+                    if self.system.test_ai_connection():
+                        self.log("✅ AI 接口可用")
+                    else:
+                        self.log("⚠️ AI 接口不可用，请更新 API Key")
+            except Exception as e:
+                self.system = None
+                self.log(f"⚠️ AI系统重新加载失败: {e}")
         
         self.account_manager.load_accounts()
         current_acc = self.account_manager.get_current_account()
@@ -370,8 +415,8 @@ class DouyinGUI:
                 
                 if len(cookies_str) > 100:
                     self.log(f"✅ Cookie检测到！长度: {len(cookies_str)} 字符")
-                    self.status_label.config(text="✅ 已登录", fg="green")
-                    messagebox.showinfo("成功", "登录成功！Cookie已保存到.env文件")
+                    self.ui_call(lambda: self.status_label.config(text="✅ 已登录", fg="green"))
+                    self.ui_call(lambda: messagebox.showinfo("成功", "登录成功！Cookie已保存到.env文件"))
                     return
                 
                 self.log(f"⏳ 等待中... ({elapsed}秒)")
@@ -385,17 +430,17 @@ class DouyinGUI:
             
             if len(cookies_str) > 100:
                 self.log(f"✅ Cookie保存成功！长度: {len(cookies_str)} 字符")
-                self.status_label.config(text="✅ 已登录", fg="green")
-                messagebox.showinfo("成功", "登录成功！Cookie已保存到.env文件")
+                self.ui_call(lambda: self.status_label.config(text="✅ 已登录", fg="green"))
+                self.ui_call(lambda: messagebox.showinfo("成功", "登录成功！Cookie已保存到.env文件"))
             else:
                 self.log("⚠️ 登录超时或未完成")
                 
                 if os.getenv('DY_COOKIES', '') and len(os.getenv('DY_COOKIES', '')) > 100:
-                    self.status_label.config(text="✅ 已登录", fg="green")
-                    messagebox.showwarning("提示", "检测到已有Cookie，继续使用原有Cookie")
+                    self.ui_call(lambda: self.status_label.config(text="✅ 已登录", fg="green"))
+                    self.ui_call(lambda: messagebox.showwarning("提示", "检测到已有Cookie，继续使用原有Cookie"))
                 else:
-                    self.status_label.config(text="❌ 登录失败", fg="red")
-                    messagebox.showerror("失败", f"登录超时（{timeout}秒）\n\n请手动运行 python auto_login.py")
+                    self.ui_call(lambda: self.status_label.config(text="❌ 登录失败", fg="red"))
+                    self.ui_call(lambda: messagebox.showerror("失败", f"登录超时（{timeout}秒）\n\n请手动运行 python auto_login.py"))
             
         except Exception as e:
             self.log(f"❌ 自动登录出错: {e}")
@@ -404,21 +449,31 @@ class DouyinGUI:
             
             cookies_str = os.getenv('DY_COOKIES', '')
             if cookies_str and len(cookies_str) > 100:
-                self.status_label.config(text="✅ 已登录", fg="green")
-                messagebox.showwarning("提示", f"自动登录出错: {e}\n\n保持使用原有Cookie")
+                self.ui_call(lambda: self.status_label.config(text="✅ 已登录", fg="green"))
+                self.ui_call(lambda: messagebox.showwarning("提示", f"自动登录出错: {e}\n\n保持使用原有Cookie"))
             else:
-                self.status_label.config(text="❌ 登录失败", fg="red")
-                messagebox.showerror("错误", f"自动登录失败:\n{e}")
+                self.ui_call(lambda: self.status_label.config(text="❌ 登录失败", fg="red"))
+                self.ui_call(lambda: messagebox.showerror("错误", f"自动登录失败:\n{e}"))
             
     def start_system(self):
         if self.running:
             self.log("⚠️ 系统已在运行中")
             return
-            
+
+        load_dotenv(BASE_DIR / '.env', override=True)
         cookies_str = os.getenv('DY_COOKIES', '')
+        web_protect_str = os.getenv('WEB_PROTECT', '')
+        keys_str = os.getenv('KEYS', '')
+
         if not cookies_str or len(cookies_str) < 100:
-            messagebox.showwarning("提示", "请先点击【自动登录】获取Cookie")
+            messagebox.showwarning("提示", "请先点击【自动登录】或通过【账号管理】获取 Cookie")
             return
+        if not web_protect_str or not keys_str:
+            messagebox.showwarning(
+                "提示",
+                "缺少 WEB_PROTECT 或 KEYS，私信可能无法发送。\n\n"
+                "请在浏览器控制台运行 get_web_protect.js 获取后写入 .env，或通过账号管理重新登录。"
+            )
             
         self.log("🚀 正在启动系统...")
         threading.Thread(target=self.run_system, daemon=True).start()
@@ -434,6 +489,7 @@ class DouyinGUI:
         try:
             from dy_apis.douyin_api import DouyinAPI
             
+            load_dotenv(BASE_DIR / '.env', override=True)
             cookies_str = os.getenv('DY_COOKIES', '')
             web_protect_str = os.getenv('WEB_PROTECT', '')
             keys_str = os.getenv('KEYS', '')
@@ -442,17 +498,36 @@ class DouyinGUI:
             auth.perepare_auth(cookies_str, web_protect_str, keys_str)
             self.auth = auth
             self.log("✅ 认证成功")
+
+            try:
+                self.my_uid = str(auth.get_uid())
+                self.log(f"✅ 当前账号 UID: {self.my_uid}")
+            except Exception as e:
+                self.my_uid = None
+                self.log(f"⚠️ 无法获取 UID，将跳过自身消息过滤: {e}")
             
             try:
                 device_id = DouyinAPI.get_device_id(auth=auth)
                 self.log(f"✅ device_id: {device_id}")
-            except Exception as e:
+            except Exception:
                 device_id = auth.cookie.get('a11y_device_id') or '7631877838707'
                 self.log(f"⚠️ 使用备用device_id: {device_id}")
             
             try:
-                self.system = AutoReplySystem('config_ai.env')
-                self.log("✅ AI系统就绪")
+                self.system = AutoReplySystem(str(BASE_DIR / 'config_ai.env'))
+                self.system.knowledge_base.load()
+                self.log("✅ AI/回复系统就绪")
+                if self.system.ai_fallback:
+                    if self.system.ai_config.api_key:
+                        self.log("🧪 正在测试 AI 连接...")
+                        if self.system.test_ai_connection():
+                            self.log("✅ AI 接口可用")
+                        else:
+                            self.log("⚠️ AI 接口不可用：API Key 无效或已过期")
+                            self.log("   请到 https://platform.minimaxi.com 重新生成 Key")
+                            self.log("   写入 config_ai.env 的 ANTHROPIC_API_KEY 或 .env 的 MINIMAX_API_KEY")
+                    else:
+                        self.log("⚠️ 未配置 API Key，AI 降级回复不可用")
             except Exception as e:
                 self.log(f"⚠️ AI系统初始化失败: {e}")
                 self.system = None
@@ -521,25 +596,40 @@ class DouyinGUI:
                 content = msg.content
                 msg_type = msg.message_type
                 conversation_id = msg.conversation_id
+                conversation_short_id = msg.conversation_short_id
+                
+                if self.my_uid and str(sender) == self.my_uid:
+                    return
                 
                 try:
                     content = json.loads(content)
-                except:
+                except (json.JSONDecodeError, TypeError):
                     content = {}
                 
                 if msg_type == 7:
                     text = content.get("text", "")
                     if text:
                         self.log(f"💬 收到私信 from {sender}: {text}")
-                        threading.Thread(target=self.reply_async, args=(text, str(conversation_id), sender), daemon=True).start()
+                        threading.Thread(
+                            target=self.reply_async,
+                            args=(text, str(conversation_id), sender, conversation_short_id),
+                            daemon=True
+                        ).start()
                         
         except Exception as e:
             self.log(f"⚠️ 消息处理错误: {e}")
     
-    def reply_async(self, text, conversation_id, sender):
+    def reply_async(self, text, conversation_id, sender, conversation_short_id=0):
         try:
             import random
-            delay = random.uniform(8, 20)
+
+            if self.system:
+                min_delay = self.system.min_delay
+                max_delay = self.system.max_delay
+            else:
+                min_delay, max_delay = 8, 20
+
+            delay = random.uniform(min_delay, max_delay)
             self.log(f"⏳ 延迟 {delay:.1f}秒后回复...")
             time.sleep(delay)
             
@@ -550,9 +640,10 @@ class DouyinGUI:
                 reply = self.system.process_message(message)
                 
                 if reply:
-                    self.log(f"🤖 AI回复: {reply}")
+                    source = "知识库" if self.system.knowledge_first and self.system.knowledge_base.find_match(text) else "AI"
+                    self.log(f"🤖 {source}回复: {reply}")
                 else:
-                    self.log("⚠️ AI未返回回复，尝试使用知识库匹配...")
+                    self.log("⚠️ 自动回复未生成内容（可能未命中知识库或已关闭 AI 降级）")
             
             if not reply:
                 reply = self.kb_manager.match_knowledge(text)
@@ -562,30 +653,36 @@ class DouyinGUI:
                     self.log("⚠️ 知识库未匹配到相关内容")
             
             if reply:
-                self.send_reply(conversation_id, sender, reply)
+                self.send_reply(conversation_id, conversation_short_id, reply)
             else:
                 self.log("⚠️ 没有可用的回复内容")
                 
         except Exception as e:
             self.log(f"❌ 回复错误: {e}")
     
-    def send_reply(self, conversation_id, sender, reply_text):
+    def send_reply(self, conversation_id, conversation_short_id, reply_text):
         try:
             from dy_apis.douyin_api import DouyinAPI
-            from builder.auth import DouyinAuth
-            from dotenv import load_dotenv
             
-            load_dotenv('.env', override=True)
+            auth = self.auth
+            if auth is None:
+                load_dotenv(BASE_DIR / '.env', override=True)
+                auth = DouyinAuth()
+                auth.perepare_auth(
+                    os.getenv('DY_COOKIES', ''),
+                    os.getenv('WEB_PROTECT', ''),
+                    os.getenv('KEYS', '')
+                )
+
+            if not conversation_short_id:
+                parts = str(conversation_id).split(':')
+                if len(parts) >= 4:
+                    try:
+                        conversation_short_id = int(parts[3])
+                    except ValueError:
+                        conversation_short_id = 0
             
-            cookies_str = os.getenv('DY_COOKIES', '')
-            web_protect_str = os.getenv('WEB_PROTECT', '')
-            keys_str = os.getenv('KEYS', '')
-            
-            auth = DouyinAuth()
-            auth.perepare_auth(cookies_str, web_protect_str, keys_str)
-            
-            conversation_short_id = 0
-            ticket = ""
+            ticket = auth.ticket or ""
             
             DouyinAPI.send_msg(
                 auth,
@@ -603,13 +700,16 @@ class DouyinGUI:
         self.log(f"❌ WebSocket错误: {error}")
         
     def on_close(self, ws, close_status_code, close_msg):
-        self.log("📴 连接已断开")
+        self.log(f"📴 连接已断开 ({close_status_code})")
         if self.running:
-            self.running = False
-            self.log("🔄 尝试重新连接...")
-            time.sleep(30)
-            if self.running:
-                self.run_system()
+            self.log("🔄 30秒后尝试重新连接...")
+            threading.Thread(target=self._schedule_reconnect, daemon=True).start()
+
+    def _schedule_reconnect(self):
+        time.sleep(30)
+        if self.running:
+            self.log("🔄 正在重新连接...")
+            threading.Thread(target=self.run_system, daemon=True).start()
 
     def on_open(self, ws):
         self.log("✅ WebSocket连接成功！")

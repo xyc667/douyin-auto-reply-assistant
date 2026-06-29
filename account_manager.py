@@ -9,12 +9,11 @@ from dotenv import load_dotenv, set_key
 
 def safe_print(msg: str):
     """安全打印函数，处理Windows GBK编码问题"""
+    encoding = getattr(sys.stdout, 'encoding', None) or 'utf-8'
     try:
         print(msg)
     except UnicodeEncodeError:
-        # 移除emoji字符
-        msg = ''.join(c for c in msg if c <= '\uFFFF' and (c.isprintable() or c in '\n\r\t '))
-        print(msg)
+        print(msg.encode(encoding, errors='replace').decode(encoding, errors='replace'))
 
 
 @dataclass
