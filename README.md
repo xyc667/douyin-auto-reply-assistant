@@ -1,6 +1,6 @@
 # 抖音私信自动回复助手（整合版）
 
-> 基于 [Douyin_Spider](https://github.com/cv-cat/Douyin_Spider) 二次开发，集成 **知识库 + AI 大模型 + 真人风格延迟 + 多账号** 的 Windows 桌面助手。
+(https://github.com/cv-cat/Douyin_Spider) ，集成 **知识库 + AI 大模型 + 真人风格延迟 + 多账号** 的 Windows 桌面助手。
 
 [![Python](https://img.shields.io/badge/python-3.7%2B-blue)](https://www.python.org/)
 [![Node.js](https://img.shields.io/badge/nodejs-18%2B-green)](https://nodejs.org/)
